@@ -1,0 +1,77 @@
+{
+  "meta": {
+    "title": "EcoAudit // Instant Carbon Intelligence",
+    "description": "Automated Scope 1 & Scope 2 Energy & Fuel Audit Engine"
+  },
+  "header": {
+    "title": "EcoAudit",
+    "titleAccent": "// Instant Carbon Intelligence",
+    "subtitle": "Automated Scope 1 & Scope 2 Energy & Fuel Audit Engine",
+    "tagline": "POWERED BY AI OCR + REAL-TIME CO₂e CALCULATION"
+  },
+  "upload": {
+    "title": "Upload Utility & Fuel Bills",
+    "subtitle": "Drop your bills here to begin the carbon audit",
+    "dragText": "Drag & drop files here",
+    "orText": "or",
+    "browseButton": "Browse Files",
+    "supportedFormats": "Supported: PDF, PNG, JPG, JPEG, WEBP",
+    "maxFiles": "Up to 25 files per batch",
+    "filesSelected": "{count} file(s) selected",
+    "removeFile": "Remove file",
+    "auditButton": "Run Carbon Audit",
+    "auditButtonLoading": "Analyzing...",
+    "errors": {
+      "tooManyFiles": "Maximum 25 files allowed per batch.",
+      "invalidType": "File \"{name}\" has an unsupported format. Use PDF, PNG, JPG, JPEG, or WEBP.",
+      "noFiles": "Please select at least one file to audit."
+    }
+  },
+  "loading": {
+    "title": "Carbon Audit In Progress",
+    "stages": [
+      "Initializing AI OCR engine...",
+      "Extracting consumption data from bills...",
+      "Calculating CO₂e equivalents...",
+      "Cross-referencing emission factors...",
+      "Generating audit report..."
+    ]
+  },
+  "results": {
+    "title": "Carbon Audit Report",
+    "subtitle": "AI-generated Scope 1 & 2 emission analysis",
+    "totalCO2e": "Total CO₂e Emissions",
+    "filesAnalyzed": "Bills Analyzed",
+    "scope1Total": "Scope 1 (Direct)",
+    "scope2Total": "Scope 2 (Indirect)",
+    "downloadCSV": "Download CSV Report",
+    "newAudit": "Run New Audit",
+    "table": {
+      "fileName": "Bill / File",
+      "status": "Status",
+      "consumption": "Consumption",
+      "co2e": "CO₂e (kg)",
+      "scope": "Scope",
+      "equivalents": "Equivalents"
+    },
+    "status": {
+      "success": "Processed",
+      "error": "Failed",
+      "pending": "Pending"
+    },
+    "equivalents": {
+      "trees": "trees to offset",
+      "flights": "short-haul flights",
+      "carKm": "km driven"
+    }
+  },
+  "errors": {
+    "auditFailed": "Audit failed. Please try again.",
+    "networkError": "Network error — check your connection.",
+    "serverError": "Server error — the audit engine is temporarily unavailable."
+  },
+  "language": {
+    "en": "English",
+    "ar": "العربية"
+  }
+}
