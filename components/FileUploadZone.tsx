@@ -33,11 +33,15 @@ export default function FileUploadZone({ onSubmit, isLoading }: FileUploadZonePr
       });
 
       setFiles((prev) => {
-        const combined = [...prev, ...valid];
+        // Prevent duplicate file entries by filename + file size
+        const existingKeys = new Set(prev.map((f) => `${f.name}-${f.size}`));
+        const uniqueIncoming = valid.filter((f) => !existingKeys.has(`${f.name}-${f.size}`));
+
+        const combined = [...prev, ...uniqueIncoming];
         if (combined.length > MAX_FILES) {
           newErrors.push(t('errors.tooManyFiles'));
           setErrors(newErrors);
-          return prev.slice(0, MAX_FILES);
+          return combined.slice(0, MAX_FILES);
         }
         setErrors(newErrors);
         return combined;
@@ -234,7 +238,7 @@ export default function FileUploadZone({ onSubmit, isLoading }: FileUploadZonePr
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[240px] overflow-y-auto pr-1">
               {files.map((file, i) => (
                 <motion.div
-                  key={`${file.name}-${i}`}
+                  key={`${file.name}-${file.size}-${i}`}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.9 }}

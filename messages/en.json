@@ -1,12 +1,12 @@
 {
   "meta": {
     "title": "EcoAudit // Instant Carbon Intelligence",
-    "description": "Automated Scope 1 & Scope 2 Energy & Fuel Audit Engine"
+    "description": "Automated Energy & Fuel Carbon Audit Engine"
   },
   "header": {
     "title": "EcoAudit",
     "titleAccent": "// Instant Carbon Intelligence",
-    "subtitle": "Automated Scope 1 & Scope 2 Energy & Fuel Audit Engine",
+    "subtitle": "Automated Energy & Fuel Carbon Audit Engine",
     "tagline": "POWERED BY AI OCR + REAL-TIME CO₂e CALCULATION"
   },
   "upload": {
@@ -21,6 +21,7 @@
     "removeFile": "Remove file",
     "auditButton": "Run Carbon Audit",
     "auditButtonLoading": "Analyzing...",
+    "viewHistory": "View Session History ({count})",
     "errors": {
       "tooManyFiles": "Maximum 25 files allowed per batch.",
       "invalidType": "File \"{name}\" has an unsupported format. Use PDF, PNG, JPG, JPEG, or WEBP.",
@@ -32,37 +33,36 @@
     "stages": [
       "Initializing AI OCR engine...",
       "Extracting consumption data from bills...",
-      "Calculating CO₂e equivalents...",
+      "Calculating CO₂e emissions...",
       "Cross-referencing emission factors...",
       "Generating audit report..."
     ]
   },
   "results": {
     "title": "Carbon Audit Report",
-    "subtitle": "AI-generated Scope 1 & 2 emission analysis",
+    "subtitle": "Verified data extracted from utility & fuel bills",
     "totalCO2e": "Total CO₂e Emissions",
     "filesAnalyzed": "Bills Analyzed",
-    "scope1Total": "Scope 1 (Direct)",
-    "scope2Total": "Scope 2 (Indirect)",
-    "downloadCSV": "Download CSV Report",
-    "newAudit": "Run New Audit",
+    "totalCost": "Total Cost",
+    "regionsCount": "Emission Regions",
+    "newAudit": "New Audit",
+    "historyTab": "Session Calculations",
+    "currentRun": "Current Run",
+    "runNumber": "Calculation #{index}",
+    "clearHistory": "Clear Session",
+    "noHistory": "No previous calculations in this session",
     "table": {
-      "fileName": "Bill / File",
-      "status": "Status",
+      "type": "Type",
+      "company": "Company",
       "consumption": "Consumption",
-      "co2e": "CO₂e (kg)",
-      "scope": "Scope",
-      "equivalents": "Equivalents"
+      "cost": "Cost",
+      "co2e": "Total CO₂e",
+      "region": "Emission Region"
     },
     "status": {
       "success": "Processed",
       "error": "Failed",
       "pending": "Pending"
-    },
-    "equivalents": {
-      "trees": "trees to offset",
-      "flights": "short-haul flights",
-      "carKm": "km driven"
     }
   },
   "errors": {

@@ -1,5 +1,9 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { parseNumber, normalizeAuditResults } from './normalize';
+import type { AuditResult } from './types';
+
+export { parseNumber, normalizeAuditResults };
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -11,35 +15,47 @@ export function formatFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
-export function formatCO2e(kg: number): string {
-  if (kg >= 1000) return `${(kg / 1000).toFixed(2)} t`;
-  return `${kg.toFixed(1)} kg`;
+export function formatNumber(val: unknown, decimals: number = 2): string {
+  const num = typeof val === 'number' ? (isNaN(val) ? 0 : val) : parseNumber(val);
+  return num.toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: decimals,
+  });
 }
 
-export function getTreesEquivalent(co2eKg: number): number {
-  // 1 tree absorbs ~21 kg CO2/year
-  return Math.ceil(co2eKg / 21);
+export function formatCO2e(kg: unknown, unit: string = 'kg'): string {
+  const num = typeof kg === 'number' ? (isNaN(kg) ? 0 : kg) : parseNumber(kg);
+  if (unit.toLowerCase() === 't' || unit.toLowerCase() === 'ton' || unit.toLowerCase() === 'tons') {
+    return `${num.toLocaleString(undefined, { maximumFractionDigits: 2 })} t`;
+  }
+  if (num >= 1000) {
+    return `${(num / 1000).toLocaleString(undefined, { maximumFractionDigits: 2 })} t`;
+  }
+  return `${num.toLocaleString(undefined, { maximumFractionDigits: 2 })} ${unit}`;
 }
 
-export function getCarKmEquivalent(co2eKg: number): number {
-  // Average car emits ~0.12 kg CO2 per km
-  return Math.round(co2eKg / 0.12);
-}
-
-export function getFlightsEquivalent(co2eKg: number): number {
-  // Short-haul flight ~255 kg CO2e
-  return parseFloat((co2eKg / 255).toFixed(1));
-}
-
-export function generateCSV(results: import('./types').AuditResult[]): string {
-  const headers = ['File Name', 'Status', 'Original Value', 'Unit', 'CO2e (kg)', 'Scope'];
+export function generateCSV(results: AuditResult[]): string {
+  const headers = [
+    'Type',
+    'Company / Provider',
+    'Consumption Value',
+    'Consumption Unit',
+    'Cost Amount',
+    'Currency',
+    'Total CO2e',
+    'CO2e Unit',
+    'Emission Region',
+  ];
   const rows = results.map((r) => [
-    r.fileName,
-    r.status,
-    r.original_value ?? '',
-    r.unit ?? '',
-    r.co2e_kg ?? '',
-    r.scope ?? '',
+    r.type,
+    `"${(r.company_name || '').replace(/"/g, '""')}"`,
+    r.consumption_value,
+    r.consumption_unit,
+    r.cost_amount,
+    r.currency,
+    r.total_co2e,
+    r.co2e_unit,
+    r.emission_region,
   ]);
   return [headers, ...rows].map((row) => row.join(',')).join('\n');
 }

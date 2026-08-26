@@ -1,15 +1,30 @@
 export interface AuditResult {
-  fileName: string;
-  status: 'success' | 'error';
-  co2e_kg?: number;
-  original_value?: number;
-  unit?: string;
-  scope?: 'Scope 1' | 'Scope 2';
-  error?: string;
+  type: string;
+  company_name: string;
+  consumption_value: number;
+  consumption_unit: string;
+  cost_amount: number;
+  currency: string;
+  total_co2e: number;
+  co2e_unit: string;
+  emission_region: string;
+}
+
+export interface AuditHistoryItem {
+  id: string;
+  timestamp: number;
+  dateStr: string;
+  results: AuditResult[];
+  totalCO2e: number;
+  co2eUnit: string;
+  fileCount: number;
 }
 
 export interface AuditResponse {
   results: AuditResult[];
+  fileCount?: number;
+  errors?: string[];
+  raw?: unknown;
 }
 
 export type Locale = 'en' | 'ar';

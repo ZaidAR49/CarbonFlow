@@ -1,21 +1,38 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
 import { motion, AnimatePresence } from 'framer-motion';
 import Header from '@/components/Header';
 import FileUploadZone from '@/components/FileUploadZone';
 import CarbonLoadingScreen from '@/components/CarbonLoadingScreen';
 import AuditResultsTable from '@/components/AuditResultsTable';
-import { AppState } from '@/lib/types';
+import { normalizeAuditResults } from '@/lib/normalize';
+import {
+  getSessionAuditHistory,
+  addAuditToSessionHistory,
+  clearSessionAuditHistory,
+} from '@/lib/session-storage';
+import { AppState, AuditHistoryItem } from '@/lib/types';
 import type { AuditResult } from '@/lib/types';
 
 export default function HomePage() {
   const t = useTranslations('errors');
+  const tUpload = useTranslations('upload');
   const [appState, setAppState] = useState<AppState>('upload');
   const [results, setResults] = useState<AuditResult[]>([]);
+  const [history, setHistory] = useState<AuditHistoryItem[]>([]);
+  const [activeHistoryId, setActiveHistoryId] = useState<string | undefined>(undefined);
   const [errorMessage, setErrorMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Load session history on mount
+  useEffect(() => {
+    const saved = getSessionAuditHistory();
+    if (saved && saved.length > 0) {
+      setHistory(saved);
+    }
+  }, []);
 
   const handleAudit = async (files: File[]) => {
     setIsLoading(true);
@@ -24,9 +41,12 @@ export default function HomePage() {
 
     try {
       const formData = new FormData();
+      // Send each file exactly once under the 'files' field
       files.forEach((file) => {
         formData.append('files', file);
       });
+
+      console.log(`[Frontend] Dispatching ${files.length} unique file(s) to /api/audit`);
 
       const response = await fetch('/api/audit', {
         method: 'POST',
@@ -35,23 +55,31 @@ export default function HomePage() {
 
       if (!response.ok) {
         const err = await response.json().catch(() => ({}));
-        throw new Error(err?.error || `Server error ${response.status}`);
+        throw new Error(err?.details || err?.error || `Server error ${response.status}`);
       }
 
       const data = await response.json();
+      console.log('[Audit] Response received:', data);
 
-      // Handle both array and object response from n8n
-      const resultsArray: AuditResult[] = Array.isArray(data)
-        ? data
-        : data.results ?? [];
+      const resultsArray: AuditResult[] = normalizeAuditResults(data);
 
+      if (resultsArray.length === 0) {
+        console.warn('[Audit] No structured results found in payload:', data);
+      }
+
+      // Save into session storage cache
+      const updatedHistory = addAuditToSessionHistory(resultsArray, files.length);
+      setHistory(updatedHistory);
+      setActiveHistoryId(updatedHistory[0]?.id);
       setResults(resultsArray);
       setAppState('results');
     } catch (error) {
-      console.error('Audit error:', error);
+      console.error('[Audit] Error occurred:', error);
       const msg =
         error instanceof TypeError
           ? t('networkError')
+          : error instanceof Error
+          ? error.message
           : t('auditFailed');
       setErrorMessage(msg);
       setAppState('error');
@@ -60,9 +88,20 @@ export default function HomePage() {
     }
   };
 
+  const handleSelectHistoryItem = (item: AuditHistoryItem) => {
+    setActiveHistoryId(item.id);
+    setResults(item.results);
+    setAppState('results');
+  };
+
+  const handleClearHistory = () => {
+    clearSessionAuditHistory();
+    setHistory([]);
+    setActiveHistoryId(undefined);
+  };
+
   const handleReset = () => {
     setAppState('upload');
-    setResults([]);
     setErrorMessage('');
   };
 
@@ -86,7 +125,7 @@ export default function HomePage() {
         <Header />
 
         {/* Main content */}
-        <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-8 py-12">
+        <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-8 py-10">
           <AnimatePresence mode="wait">
             {/* Upload state */}
             {(appState === 'upload' || appState === 'error') && (
@@ -96,8 +135,33 @@ export default function HomePage() {
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.4 }}
-                className="w-full"
+                className="w-full space-y-4"
               >
+                {/* Previous session history banner if available */}
+                {history.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="max-w-3xl mx-auto flex items-center justify-between p-3 px-4 rounded-xl glass-card text-xs text-[#94A3B8]"
+                    style={{ border: '1px solid rgba(16,185,129,0.2)' }}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="w-2 h-2 rounded-full bg-[#10B981] animate-pulse" />
+                      <span>
+                        {tUpload('viewHistory', { count: history.length })}
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={() => handleSelectHistoryItem(history[0])}
+                      className="text-[#34D399] hover:underline font-semibold flex items-center gap-1"
+                    >
+                      <span>Review last calculation ({history[0].results.length} bills)</span>
+                      <span>→</span>
+                    </button>
+                  </motion.div>
+                )}
+
                 <FileUploadZone onSubmit={handleAudit} isLoading={isLoading} />
 
                 {/* Error state banner */}
@@ -144,7 +208,14 @@ export default function HomePage() {
                 exit={{ opacity: 0 }}
                 className="w-full"
               >
-                <AuditResultsTable results={results} onReset={handleReset} />
+                <AuditResultsTable
+                  results={results}
+                  history={history}
+                  activeHistoryId={activeHistoryId}
+                  onSelectHistoryItem={handleSelectHistoryItem}
+                  onClearHistory={handleClearHistory}
+                  onReset={handleReset}
+                />
               </motion.div>
             )}
           </AnimatePresence>
