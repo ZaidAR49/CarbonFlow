@@ -75,7 +75,20 @@ function normalizeSingleItem(item: unknown): AuditResult | null {
       ? (raw.json as Record<string, unknown>)
       : raw;
 
-  // Extract type
+  // ── Unpack Climatiq nested sub-objects ──────────────────────────────────
+  // Climatiq returns: { co2e, co2e_unit, emission_factor: { category, region },
+  //                     activity_data: { activity_value, activity_unit } }
+  const activityData =
+    src.activity_data && typeof src.activity_data === 'object'
+      ? (src.activity_data as Record<string, unknown>)
+      : null;
+
+  const emissionFactor =
+    src.emission_factor && typeof src.emission_factor === 'object'
+      ? (src.emission_factor as Record<string, unknown>)
+      : null;
+
+  // Extract type — prefer explicit field, then Climatiq emission_factor.category
   const rawType =
     src.type ??
     src.utility_type ??
@@ -87,6 +100,7 @@ function normalizeSingleItem(item: unknown): AuditResult | null {
     src.source ??
     src.bill_type ??
     src.billType ??
+    emissionFactor?.category ??
     '';
 
   const typeStr = String(rawType).toLowerCase().trim();
@@ -106,7 +120,7 @@ function normalizeSingleItem(item: unknown): AuditResult | null {
       ''
   ).trim();
 
-  // Extract consumption value
+  // Extract consumption value — prefer explicit field, then Climatiq activity_data.activity_value
   const consumptionVal = parseNumber(
     src.consumption_value ??
       src.consumptionValue ??
@@ -116,16 +130,18 @@ function normalizeSingleItem(item: unknown): AuditResult | null {
       src.quantity ??
       src.original_value ??
       src.originalValue ??
-      src.units_consumed
+      src.units_consumed ??
+      activityData?.activity_value
   );
 
-  // Extract consumption unit
+  // Extract consumption unit — prefer explicit field, then Climatiq activity_data.activity_unit
   const consumptionUnit = String(
     src.consumption_unit ??
       src.consumptionUnit ??
       src.unit ??
       src.uom ??
       src.metric_unit ??
+      activityData?.activity_unit ??
       ''
   ).trim();
 
@@ -176,25 +192,27 @@ function normalizeSingleItem(item: unknown): AuditResult | null {
       'kg'
   ).trim();
 
-  // Extract emission region
+  // Extract emission region — prefer explicit field, then Climatiq emission_factor.region
   const emissionRegion = String(
     src.emission_region ??
       src.emissionRegion ??
       src.region ??
       src.country ??
       src.location ??
+      emissionFactor?.region ??
       '—'
   ).trim();
 
-  // Infer type if empty from unit
+  // Infer type if empty — check unit, then Climatiq activity_id
   let finalType = typeStr;
   if (!finalType) {
     const unitLower = consumptionUnit.toLowerCase();
-    if (unitLower.includes('kwh') || unitLower.includes('mwh')) {
+    const activityId = String(emissionFactor?.activity_id ?? '').toLowerCase();
+    if (unitLower.includes('kwh') || unitLower.includes('mwh') || activityId.includes('electricity')) {
       finalType = 'electricity';
-    } else if (unitLower.includes('m3') || unitLower.includes('gal')) {
+    } else if (unitLower.includes('m3') || unitLower.includes('gal') || activityId.includes('water')) {
       finalType = 'water';
-    } else if (unitLower.includes('l') || unitLower.includes('kg') || unitLower.includes('ton')) {
+    } else if (unitLower.includes('l') || unitLower.includes('kg') || unitLower.includes('ton') || activityId.includes('fuel')) {
       finalType = 'fuel';
     } else {
       finalType = 'utility';
@@ -227,6 +245,23 @@ export function normalizeAuditResults(input: unknown): AuditResult[] {
       return normalizeAuditResults(parsed);
     }
     return [];
+  }
+
+  // ── FAST PATH: Climatiq API array ─────────────────────────────────────
+  // Climatiq responses are arrays of objects that always contain 'co2e'.
+  // Detect this pattern and normalize ALL items directly — skip generic
+  // wrapper detection that would otherwise only return the first item.
+  if (
+    Array.isArray(input) &&
+    input.length > 0 &&
+    input.every((el) => el && typeof el === 'object' && 'co2e' in (el as object))
+  ) {
+    const results: AuditResult[] = [];
+    for (const item of input) {
+      const normalized = normalizeSingleItem(item);
+      if (normalized) results.push(normalized);
+    }
+    return results;
   }
 
   // 2. If input is an Array

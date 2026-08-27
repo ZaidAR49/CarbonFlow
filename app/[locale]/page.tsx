@@ -40,14 +40,28 @@ export default function HomePage() {
     setErrorMessage('');
 
     try {
+      // ── STEP 1: Log exactly what the user submitted ──────────────────────────
+      console.log(`[Frontend] ▶ handleAudit called with ${files.length} file(s):`);
+      files.forEach((f, i) =>
+        console.log(`  [Frontend] File ${i + 1}: "${f.name}" (${(f.size / 1024).toFixed(1)} KB, type=${f.type})`)
+      );
+
       const formData = new FormData();
-      // Send each file exactly once under the 'files' field
       files.forEach((file) => {
         formData.append('files', file);
       });
 
-      console.log(`[Frontend] Dispatching ${files.length} unique file(s) to /api/audit`);
+      // Verify the FormData actually contains all files before sending
+      const fdEntries = Array.from(formData.entries());
+      console.log(`[Frontend] FormData contains ${fdEntries.length} entr(ies) before fetch:`);
+      fdEntries.forEach(([key, val]) => {
+        if (val instanceof File) {
+          console.log(`  [Frontend] key="${key}" → File "${val.name}" (${(val.size / 1024).toFixed(1)} KB)`);
+        }
+      });
 
+      // ── STEP 2: Send to our API ───────────────────────────────────────────────
+      console.log(`[Frontend] ▶ Sending FormData to /api/audit ...`);
       const response = await fetch('/api/audit', {
         method: 'POST',
         body: formData,
@@ -58,13 +72,22 @@ export default function HomePage() {
         throw new Error(err?.details || err?.error || `Server error ${response.status}`);
       }
 
+      // ── STEP 3: Inspect raw API response ─────────────────────────────────────
       const data = await response.json();
-      console.log('[Audit] Response received:', data);
+      console.log('[Frontend] ▶ Raw /api/audit response:', JSON.stringify(data, null, 2));
+      console.log(`[Frontend]   fileCount reported by API: ${data.fileCount}`);
+      console.log(`[Frontend]   results array length: ${Array.isArray(data.results) ? data.results.length : 'N/A (not array)'}`);
+      if (data.errors && data.errors.length > 0) {
+        console.warn('[Frontend]   ⚠ API reported partial errors:', data.errors);
+      }
 
-      const resultsArray: AuditResult[] = normalizeAuditResults(data);
+      // ── STEP 4: Use results directly (API already normalized them) ────────────
+      // data.results is already AuditResult[] — do NOT re-normalize the wrapper
+      const resultsArray: AuditResult[] = Array.isArray(data.results) ? data.results : normalizeAuditResults(data);
+      console.log(`[Frontend] ▶ Final resultsArray length: ${resultsArray.length}`);
 
       if (resultsArray.length === 0) {
-        console.warn('[Audit] No structured results found in payload:', data);
+        console.warn('[Frontend] ⚠ No structured results after extraction. Raw data was:', data);
       }
 
       // Save into session storage cache
@@ -74,7 +97,7 @@ export default function HomePage() {
       setResults(resultsArray);
       setAppState('results');
     } catch (error) {
-      console.error('[Audit] Error occurred:', error);
+      console.error('[Frontend] ✖ Error occurred:', error);
       const msg =
         error instanceof TypeError
           ? t('networkError')
